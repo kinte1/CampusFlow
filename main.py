@@ -1,0 +1,98 @@
+
+from campusflow.storage import create_and_save_ticket, load_tickets
+from campusflow.workflow import (
+    assign_staff,
+    get_work_queue,
+    reopen_ticket,
+    update_ticket_status,
+)
+from campusflow.reports import print_report
+
+
+def show_tickets(tickets):
+    if not tickets:
+        print("\nNo tickets found.")
+        return
+
+    for ticket in tickets:
+        print(
+            f"\n{ticket['id']} - {ticket['title']}\n"
+            f"  Category: {ticket['category']}\n"
+            f"  Priority: {ticket['priority']}\n"
+            f"  Status: {ticket['status']}\n"
+            f"  Assigned to: {ticket['assigned_to'] or 'Unassigned'}"
+        )
+
+
+def main():
+    while True:
+        print("\n=== CAMPUSFLOW ===")
+        print("1. Create ticket")
+        print("2. List all tickets")
+        print("3. Assign staff")
+        print("4. Start ticket")
+        print("5. Resolve ticket")
+        print("6. Reopen ticket")
+        print("7. View work queue")
+        print("8. View report")
+        print("0. Exit")
+
+        choice = input("Choose an option: ").strip()
+
+        try:
+            if choice == "1":
+                title = input("Ticket title: ")
+                category = input(
+                    "Category (Network/Hardware/Software/Other): "
+                )
+                urgency = input("Urgency (low/medium/high): ")
+                affected_users = int(input("Affected users: "))
+
+                ticket = create_and_save_ticket(
+                    title, category, urgency, affected_users
+                )
+                print(f"Created ticket {ticket['id']}.")
+
+            elif choice == "2":
+                show_tickets(load_tickets())
+
+            elif choice == "3":
+                ticket_id = input("Ticket ID: ")
+                staff_name = input("Staff name: ")
+                ticket = assign_staff(ticket_id, staff_name)
+                print(f"{ticket['id']} assigned to {ticket['assigned_to']}.")
+
+            elif choice == "4":
+                ticket_id = input("Ticket ID: ")
+                update_ticket_status(ticket_id, "in_progress")
+                print("Ticket marked as in progress.")
+
+            elif choice == "5":
+                ticket_id = input("Ticket ID: ")
+                update_ticket_status(ticket_id, "resolved")
+                print("Ticket resolved.")
+
+            elif choice == "6":
+                ticket_id = input("Ticket ID: ")
+                reopen_ticket(ticket_id)
+                print("Ticket reopened.")
+
+            elif choice == "7":
+                show_tickets(get_work_queue())
+
+            elif choice == "8":
+                print_report()
+
+            elif choice == "0":
+                print("Goodbye!")
+                break
+
+            else:
+                print("Invalid option. Choose from the menu.")
+
+        except (ValueError, OSError) as error:
+            print(f"Error: {error}")
+
+
+if __name__ == "__main__":
+    main()
