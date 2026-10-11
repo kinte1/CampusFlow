@@ -622,3 +622,45 @@ Contributors should:
 ## License
 
 A license has not yet been selected. Licensing information will be added once the project maintainers agree on the appropriate license.
+
+## Running CampusFlow
+
+CampusFlow is a Python command-line application for managing campus technical support tickets. It uses the Python standard library and stores tickets in a JSON file.
+
+### Requirements
+
+- Python 3.10 or newer
+- Git
+
+### Start the application
+
+From the project root, run:
+
+```bash
+python main.py
+```
+
+### Available operations
+
+The menu allows users to:
+
+1. Create a ticket with a title, category, urgency, and affected-user count.
+2. List all saved tickets.
+3. Assign a staff member to a ticket.
+4. Start work on an assigned ticket.
+5. Resolve an in-progress ticket.
+6. Reopen a resolved ticket.
+7. View the unresolved work queue, sorted by priority and ticket ID.
+8. View ticket totals and counts by status and priority.
+
+Tickets are saved in `data/tickets.json`. If the file does not exist, the application starts with an empty ticket list.
+
+### Run tests
+
+Run the complete test suite with:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+The test suite covers ticket validation, priority calculation, JSON persistence, workflow rules, and reporting.
