@@ -1,9 +1,12 @@
-
 import tempfile
 import unittest
 from pathlib import Path
 
-from campusflow.storage import create_and_save_ticket, load_tickets
+from campusflow.storage import (
+    create_and_save_ticket,
+    load_tickets,
+    save_tickets,
+)
 from campusflow.workflow import (
     assign_staff,
     get_work_queue,
@@ -122,6 +125,30 @@ class TestTicketWorkflow(unittest.TestCase):
         queue = get_work_queue(self.file_path)
 
         self.assertEqual(queue, [])
+
+    def test_work_queue_sorts_ticket_ids_numerically(self):
+        self.create_ticket("Ticket one")
+        self.create_ticket("Ticket two")
+
+        tickets = load_tickets(self.file_path)
+        tickets[0]["id"] = "T1000"
+        tickets[1]["id"] = "T999"
+        save_tickets(tickets, self.file_path)
+
+        queue = get_work_queue(self.file_path)
+
+        self.assertEqual(
+            [ticket["id"] for ticket in queue],
+            ["T999", "T1000"],
+        )
+
+    def test_reject_invalid_status(self):
+        ticket = self.create_ticket("Wi-Fi issue")
+
+        with self.assertRaises(ValueError):
+            update_ticket_status(
+                ticket["id"], "pending", self.file_path
+            )
 
 
 if __name__ == "__main__":
