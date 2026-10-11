@@ -82,10 +82,92 @@ class TestTicketStorage(unittest.TestCase):
 
         self.assertEqual(generate_ticket_id(tickets), "T004")
 
+    def test_load_rejects_null_ticket(self):
+        self.file_path.write_text(
+            "[null]",
+            encoding="utf-8",
+        )
 
-if __name__ == "__main__":
-    unittest.main()
+        with self.assertRaisesRegex(ValueError, "must be a dictionary"):
+            load_tickets(self.file_path)
 
+    def test_load_rejects_ticket_missing_fields(self):
+        self.file_path.write_text(
+            '[{"id": "T001"}]',
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(ValueError, "missing fields"):
+            load_tickets(self.file_path)
+
+    def test_load_rejects_incorrect_priority(self):
+        ticket = {
+            "id": "T001",
+            "title": "Wi-Fi is not working",
+            "category": "Network",
+            "urgency": "high",
+            "affected_users": 12,
+            "priority": "low",
+            "status": "open",
+            "assigned_to": None,
+        }
+
+        self.file_path.write_text(
+            json.dumps([ticket]),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "priority does not match",
+        ):
+            load_tickets(self.file_path)
+
+    def test_load_rejects_duplicate_ticket_ids(self):
+        ticket = {
+            "id": "T001",
+            "title": "Wi-Fi problem",
+            "category": "Network",
+            "urgency": "high",
+            "affected_users": 12,
+            "priority": "critical",
+            "status": "open",
+            "assigned_to": None,
+        }
+
+        self.file_path.write_text(
+            json.dumps([ticket, ticket]),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "duplicate ticket ID",
+        ):
+            load_tickets(self.file_path)
+
+    def test_load_rejects_unassigned_in_progress_ticket(self):
+        ticket = {
+            "id": "T001",
+            "title": "Wi-Fi problem",
+            "category": "Network",
+            "urgency": "high",
+            "affected_users": 12,
+            "priority": "critical",
+            "status": "in_progress",
+            "assigned_to": None,
+        }
+
+        self.file_path.write_text(
+            json.dumps([ticket]),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "in-progress ticket must be assigned",
+        ):
+            load_tickets(self.file_path)
 
 class TestTicketCreationIntegration(unittest.TestCase):
 
@@ -115,10 +197,19 @@ class TestTicketCreationIntegration(unittest.TestCase):
         from campusflow.storage import create_and_save_ticket
 
         create_and_save_ticket(
-            "Printer problem", "Hardware", "low", 1, self.file_path
+            "Printer problem",
+            "Hardware",
+            "low",
+            1,
+            self.file_path,
         )
+
         create_and_save_ticket(
-            "Software problem", "Software", "medium", 3, self.file_path
+            "Software problem",
+            "Software",
+            "medium",
+            3,
+            self.file_path,
         )
 
         reloaded_tickets = load_tickets(self.file_path)
@@ -127,3 +218,7 @@ class TestTicketCreationIntegration(unittest.TestCase):
             [ticket["id"] for ticket in reloaded_tickets],
             ["T001", "T002"],
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

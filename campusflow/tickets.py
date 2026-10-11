@@ -1,3 +1,6 @@
+import re
+
+
 def validate_title(title):
     """Validate a support ticket title."""
     if not isinstance(title, str):
@@ -10,6 +13,7 @@ def validate_title(title):
 
     return title
 
+
 def validate_category(category):
     """Validate a support ticket category."""
     allowed_categories = {"Network", "Hardware", "Software", "Other"}
@@ -21,10 +25,12 @@ def validate_category(category):
 
     if category not in allowed_categories:
         raise ValueError(
-            f"Invalid category. Choose one of: {', '.join(sorted(allowed_categories))}."
+            f"Invalid category. Choose one of: "
+            f"{', '.join(sorted(allowed_categories))}."
         )
 
     return category
+
 
 def validate_urgency(urgency):
     """Validate a support ticket urgency level."""
@@ -42,15 +48,19 @@ def validate_urgency(urgency):
 
     return urgency
 
+
 def validate_affected_users(affected_users):
     """Validate the number of users affected by a support issue."""
-    if isinstance(affected_users, bool) or not isinstance(affected_users, int):
+    if isinstance(affected_users, bool) or not isinstance(
+        affected_users, int
+    ):
         raise ValueError("Affected users must be a positive integer.")
 
     if affected_users <= 0:
         raise ValueError("Affected users must be a positive integer.")
 
     return affected_users
+
 
 def calculate_priority(urgency, affected_users):
     """Calculate ticket priority from urgency and affected-user count."""
@@ -68,12 +78,18 @@ def calculate_priority(urgency, affected_users):
 
     return "low"
 
+
 def create_ticket(ticket_id, title, category, urgency, affected_users):
     """Create and return a validated support ticket."""
-    if not isinstance(ticket_id, str) or not ticket_id.strip():
-        raise ValueError("Ticket ID must be non-empty text.")
+    if not isinstance(ticket_id, str):
+        raise ValueError("Ticket ID must be text.")
 
     ticket_id = ticket_id.strip()
+
+    if not re.fullmatch(r"T\d{3,}", ticket_id):
+        raise ValueError(
+            "Ticket ID must start with T followed by at least three digits."
+        )
 
     title = validate_title(title)
     category = validate_category(category)
