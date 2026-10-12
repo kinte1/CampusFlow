@@ -1,4 +1,6 @@
-# AI Learning Log
+# AI Learning Log From Ejeme Godwin
+
+# Fellow 1: Ticket Workflow, Reports, and CLI
 
 Updated upstream
 - **Interaction 1:** Understanding Application Structure
@@ -40,69 +42,6 @@ I will continue improving my ability to explain the code, identify edge cases, a
 This document records how both fellows used AI while developing
 CampusFlow, what they learned, and how they evaluated or improved
 AI suggestions.
-
----
-
-# Fellow 1: Ticket Workflow, Reports, and CLI
-
-## Interaction 1: Choosing the Correct Module for Ticket Data
-
-- **Problem:** Deciding where the workflow should get existing tickets.
-
-- **AI suggestion:** Use `load_tickets()` and `save_tickets()` from
-  `campusflow.storage`.
-
-- **What I learned:** A module's responsibility is different from
-  where its data is stored. The workflow module manages ticket
-  operations, while the storage module handles JSON persistence.
-
-- **My contribution:** I initially suggested keeping the ticket list
-  inside `workflow.py`. I learned why loading existing records is
-  necessary to preserve data between operations.
-
-## Interaction 2: Importing Storage Functions
-
-- **Problem:** Importing the functions needed for ticket assignment
-  and persistence.
-
-- **AI suggestion:**
-  `from campusflow.storage import load_tickets, save_tickets`
-
-- **What I learned:** Python imports allow one module to reuse
-  functions from another module without duplicating their
-  implementation. This helps keep the project organized.
-
-- **My contribution:** I used the separation between workflow
-  operations and storage functions to understand how the modules
-  work together.
-
-## Interaction 3: Improving the Learning Approach
-
-- **Problem:** Completing the project within a limited submission
-  window.
-
-- **AI suggestion:** Learn through short questions and incremental
-  implementation.
-
-- **My correction:** I asked to stop the question-and-answer approach
-  and prioritize completing the required implementation because
-  there was only one hour remaining.
-
-- **Outcome:** The approach changed to prioritizing workflow
-  management, reports, CLI integration, tests, documentation,
-  and Git collaboration.
-
-- **What I learned:** AI assistance should adapt to the task and
-  available time. It is important to balance understanding the code
-  with completing and verifying the required work.
-
-## Reflection
-
-AI helped me understand module responsibilities, Python imports,
-persistence, and workflow design. I learned that separating
-responsibilities makes a project easier to maintain and test.
-I remain responsible for reviewing the implementation, running
-tests, and checking that the requirements are satisfied.
 
 ---
 
