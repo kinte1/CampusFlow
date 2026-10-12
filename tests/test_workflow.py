@@ -126,21 +126,24 @@ class TestTicketWorkflow(unittest.TestCase):
 
         self.assertEqual(queue, [])
 
+    
     def test_work_queue_sorts_ticket_ids_numerically(self):
-        self.create_ticket("Ticket one")
+        """Same-priority tickets are sorted by numeric ID."""
+        self.create_ticket("Ticket ten")
         self.create_ticket("Ticket two")
 
         tickets = load_tickets(self.file_path)
-        tickets[0]["id"] = "T1000"
-        tickets[1]["id"] = "T999"
+        tickets[0]["id"] = "T010"
+        tickets[1]["id"] = "T002"
         save_tickets(tickets, self.file_path)
 
         queue = get_work_queue(self.file_path)
 
         self.assertEqual(
             [ticket["id"] for ticket in queue],
-            ["T999", "T1000"],
+            ["T002", "T010"],
         )
+
 
     def test_reject_invalid_status(self):
         ticket = self.create_ticket("Wi-Fi issue")
