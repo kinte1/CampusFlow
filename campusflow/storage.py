@@ -170,6 +170,17 @@ def create_and_save_ticket(
     tickets = load_tickets(file_path)
     ticket_id = generate_ticket_id(tickets)
 
+    # create_ticket() only sees the arguments it is handed, so it cannot know
+    # whether that ID is already taken in the collection it is about to join.
+    # The ID is derived from the collection above and should never collide, so
+    # reaching this means the generator is wrong rather than the caller. Fail
+    # here, before anything is appended or written, rather than save a second
+    # record under an ID that already exists.
+    if any(ticket.get("id") == ticket_id for ticket in tickets):
+        raise ValueError(
+            f"Ticket ID {ticket_id} already exists in the collection."
+        )
+
     ticket = create_ticket(
         ticket_id,
         title,

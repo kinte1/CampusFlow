@@ -102,6 +102,17 @@ class TestTicketWorkflow(unittest.TestCase):
         updated = assign_staff(ticket_id, "David", self.file_path)
         self.assertEqual(updated["assigned_to"], "David")
 
+    def test_resolved_ticket_must_be_reopened_before_status_change(self):
+        ticket = self.create_ticket("Wi-Fi issue")
+        ticket_id = ticket["id"]
+
+        assign_staff(ticket_id, "Grace", self.file_path)
+        update_ticket_status(ticket_id, "in_progress", self.file_path)
+        update_ticket_status(ticket_id, "resolved", self.file_path)
+
+        with self.assertRaisesRegex(ValueError, "Reopen the ticket"):
+            update_ticket_status(ticket_id, "in_progress", self.file_path)
+
     def test_work_queue_prioritizes_critical_tickets(self):
         self.create_ticket("Low issue")
         self.create_ticket("Critical issue", "high", 10)
