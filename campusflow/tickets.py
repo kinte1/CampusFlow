@@ -1,96 +1,61 @@
-import re
+from campusflow.validation import (
+    CATEGORIES,
+    PRIORITIES,
+    PRIORITY_ORDER,
+    STATUSES,
+    URGENCIES,
+    calculate_priority,
+    can_transition,
+    validate_affected_users,
+    validate_assigned_to,
+    validate_author,
+    validate_category,
+    validate_message,
+    validate_note_id,
+    validate_notes,
+    validate_priority,
+    validate_status,
+    validate_ticket,
+    validate_ticket_id,
+    validate_title,
+    validate_urgency,
+)
 
-
-def validate_title(title):
-    """Validate a support ticket title."""
-    if not isinstance(title, str):
-        raise ValueError("Ticket title must be text.")
-
-    title = title.strip()
-
-    if not title:
-        raise ValueError("Ticket title cannot be empty.")
-
-    return title
-
-
-def validate_category(category):
-    """Validate a support ticket category."""
-    allowed_categories = {"Network", "Hardware", "Software", "Other"}
-
-    if not isinstance(category, str):
-        raise ValueError("Category must be text.")
-
-    category = category.strip().title()
-
-    if category not in allowed_categories:
-        raise ValueError(
-            f"Invalid category. Choose one of: "
-            f"{', '.join(sorted(allowed_categories))}."
-        )
-
-    return category
-
-
-def validate_urgency(urgency):
-    """Validate a support ticket urgency level."""
-    allowed_urgencies = {"low", "medium", "high"}
-
-    if not isinstance(urgency, str):
-        raise ValueError("Urgency must be text.")
-
-    urgency = urgency.strip().lower()
-
-    if urgency not in allowed_urgencies:
-        raise ValueError(
-            "Invalid urgency. Choose one of: high, low, medium."
-        )
-
-    return urgency
-
-
-def validate_affected_users(affected_users):
-    """Validate the number of users affected by a support issue."""
-    if isinstance(affected_users, bool) or not isinstance(
-        affected_users, int
-    ):
-        raise ValueError("Affected users must be a positive integer.")
-
-    if affected_users <= 0:
-        raise ValueError("Affected users must be a positive integer.")
-
-    return affected_users
-
-
-def calculate_priority(urgency, affected_users):
-    """Calculate ticket priority from urgency and affected-user count."""
-    urgency = validate_urgency(urgency)
-    affected_users = validate_affected_users(affected_users)
-
-    if urgency == "high" and affected_users >= 10:
-        return "critical"
-
-    if urgency == "high" or affected_users >= 10:
-        return "high"
-
-    if urgency == "medium" or affected_users >= 3:
-        return "medium"
-
-    return "low"
+# Re-exported so existing callers and tests can keep importing validation
+# helpers from campusflow.tickets. Kept until every caller imports from
+# campusflow.validation directly.
+__all__ = [
+    "CATEGORIES",
+    "PRIORITIES",
+    "PRIORITY_ORDER",
+    "STATUSES",
+    "URGENCIES",
+    "calculate_priority",
+    "can_transition",
+    "create_ticket",
+    "validate_affected_users",
+    "validate_assigned_to",
+    "validate_author",
+    "validate_category",
+    "validate_message",
+    "validate_note_id",
+    "validate_notes",
+    "validate_priority",
+    "validate_status",
+    "validate_ticket",
+    "validate_ticket_id",
+    "validate_title",
+    "validate_urgency",
+]
 
 
 def create_ticket(ticket_id, title, category, urgency, affected_users):
-    """Create and return a validated support ticket."""
-    if not isinstance(ticket_id, str):
-        raise ValueError("Ticket ID must be text.")
+    """Create and return a validated support ticket.
 
-    ticket_id = ticket_id.strip()
-
-    if not re.fullmatch(r"T\d{3,}", ticket_id):
-        raise ValueError(
-            "Ticket ID must start with T followed by at least three digits."
-        )
-
+    Every field is validated before the ticket dictionary is built, so an
+    invalid argument raises without producing a partially-formed record.
+    """
+    ticket_id = validate_ticket_id(ticket_id)
     title = validate_title(title)
     category = validate_category(category)
     urgency = validate_urgency(urgency)

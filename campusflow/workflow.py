@@ -4,14 +4,7 @@ from campusflow.storage import (
     load_tickets,
     save_tickets,
 )
-
-
-PRIORITY_ORDER = {
-    "critical": 0,
-    "high": 1,
-    "medium": 2,
-    "low": 3,
-}
+from campusflow.validation import PRIORITY_ORDER
 
 
 def _find_ticket(tickets, ticket_id):
