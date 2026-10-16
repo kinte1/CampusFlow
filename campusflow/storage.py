@@ -101,7 +101,7 @@ def save_tickets(tickets, file_path=DEFAULT_STORAGE_PATH):
             temporary_path.unlink()
 
 
-def generate_ticket_id(tickets):
+def next_ticket_id(tickets):
     """Generate the next ticket ID without reusing existing IDs."""
     highest_number = 0
 
@@ -122,6 +122,12 @@ def generate_ticket_id(tickets):
     return f"T{highest_number + 1:03d}"
 
 
+# docs/task-split.md section 2 names next_ticket_id as the published
+# interface. The old name stays bound to the same function object so imports
+# written against it keep working, rather than a second copy to drift.
+generate_ticket_id = next_ticket_id
+
+
 def create_and_save_ticket(
     title,
     category,
@@ -131,7 +137,7 @@ def create_and_save_ticket(
 ):
     """Create a validated ticket, assign its ID, save it, and return it."""
     tickets = load_tickets(file_path)
-    ticket_id = generate_ticket_id(tickets)
+    ticket_id = next_ticket_id(tickets)
 
     # create_ticket() only sees the arguments it is handed, so it cannot know
     # whether that ID is already taken in the collection it is about to join.

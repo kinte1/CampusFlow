@@ -9,6 +9,7 @@ from campusflow.storage import (
     create_and_save_ticket,
     generate_ticket_id,
     load_tickets,
+    next_ticket_id,
     save_tickets,
 )
 
@@ -103,7 +104,7 @@ class TestTicketStorage(unittest.TestCase):
             load_tickets(self.file_path)
 
     def test_first_ticket_id(self):
-        self.assertEqual(generate_ticket_id([]), "T001")
+        self.assertEqual(next_ticket_id([]), "T001")
 
     def test_generates_next_ticket_id(self):
         tickets = [
@@ -112,7 +113,7 @@ class TestTicketStorage(unittest.TestCase):
             {"id": "T003"},
         ]
 
-        self.assertEqual(generate_ticket_id(tickets), "T004")
+        self.assertEqual(next_ticket_id(tickets), "T004")
 
     def test_ticket_id_does_not_duplicate_deleted_ticket(self):
         tickets = [
@@ -120,7 +121,11 @@ class TestTicketStorage(unittest.TestCase):
             {"id": "T003"},
         ]
 
-        self.assertEqual(generate_ticket_id(tickets), "T004")
+        self.assertEqual(next_ticket_id(tickets), "T004")
+
+    def test_old_name_is_still_the_same_function(self):
+        """A-12: the rename must not leave a second copy to drift."""
+        self.assertIs(generate_ticket_id, next_ticket_id)
 
     def test_load_rejects_null_ticket(self):
         self.file_path.write_text(
@@ -309,8 +314,11 @@ class TestTicketIdUniqueness(unittest.TestCase):
         # generator derives its ID from the collection, so it does not collide
         # on its own; what is under test is create_and_save_ticket's guard,
         # which has to hold even if the generator is later changed or wrong.
+        # The patch target is the name create_and_save_ticket actually calls:
+        # the old name is an alias of the same object, so patching it would
+        # rebind only the alias and leave the call un-stubbed.
         with mock.patch(
-            "campusflow.storage.generate_ticket_id",
+            "campusflow.storage.next_ticket_id",
             return_value=existing["id"],
         ):
             with self.assertRaisesRegex(ValueError, "already exists"):
@@ -530,7 +538,7 @@ class TestPersistenceAcceptance(unittest.TestCase):
 
         # The IDs are derived from what is on disk, so a reload must not
         # reset either of them to the start.
-        self.assertEqual(generate_ticket_id(reloaded), "T002")
+        self.assertEqual(next_ticket_id(reloaded), "T002")
 
         second = add_note(
             ticket["id"],

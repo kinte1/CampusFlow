@@ -81,7 +81,7 @@ def next_note_id(ticket):
     """Return the next free note ID for a ticket, derived from its notes.
 
     Anything that is not a well-formed note ID is skipped, the way
-    generate_ticket_id skips unusable ticket IDs, so one bad entry cannot
+    next_ticket_id skips unusable ticket IDs, so one bad entry cannot
     stop a ticket from gaining new notes.
     """
     notes = ticket.get("notes")
