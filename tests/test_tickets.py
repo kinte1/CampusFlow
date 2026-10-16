@@ -75,6 +75,13 @@ class TestValidateAffectedUsers(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_affected_users(True)
 
+    def test_rejects_float(self):
+        # 5.0 is the awkward one: it compares equal to 5, so a check written
+        # as "value == int(value)" would let it through. The type has to be
+        # tested, not the value.
+        with self.assertRaises(ValueError):
+            validate_affected_users(5.0)
+
 
 class TestCalculatePriority(unittest.TestCase):
     def test_critical_priority(self):

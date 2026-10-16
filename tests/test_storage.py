@@ -2,8 +2,10 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from campusflow.storage import (
+    create_and_save_ticket,
     load_tickets,
     save_tickets,
     generate_ticket_id,
@@ -169,6 +171,31 @@ class TestTicketStorage(unittest.TestCase):
         ):
             load_tickets(self.file_path)
 
+    def test_load_rejects_unassigned_resolved_ticket(self):
+        """Resolved is only reachable via in_progress, so it needs an owner."""
+        ticket = {
+            "id": "T001",
+            "title": "Wi-Fi problem",
+            "category": "Network",
+            "urgency": "high",
+            "affected_users": 12,
+            "priority": "critical",
+            "status": "resolved",
+            "assigned_to": None,
+        }
+
+        self.file_path.write_text(
+            json.dumps([ticket]),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "resolved ticket must be assigned",
+        ):
+            load_tickets(self.file_path)
+
+
 class TestTicketCreationIntegration(unittest.TestCase):
 
     def setUp(self):
@@ -218,6 +245,66 @@ class TestTicketCreationIntegration(unittest.TestCase):
             [ticket["id"] for ticket in reloaded_tickets],
             ["T001", "T002"],
         )
+
+
+class TestTicketIdUniqueness(unittest.TestCase):
+    """Issue #9: the create path must never write a duplicate ticket ID."""
+
+    def setUp(self):
+        self.temp_directory = tempfile.TemporaryDirectory()
+        self.file_path = Path(self.temp_directory.name) / "tickets.json"
+
+    def tearDown(self):
+        self.temp_directory.cleanup()
+
+    def test_rejects_an_id_that_is_already_taken(self):
+        existing = create_and_save_ticket(
+            "Wi-Fi is down",
+            "network",
+            "high",
+            12,
+            self.file_path,
+        )
+        before = self.file_path.read_bytes()
+
+        # Stub the generator so it hands back the ID already on disk. The real
+        # generator derives its ID from the collection, so it does not collide
+        # on its own; what is under test is create_and_save_ticket's guard,
+        # which has to hold even if the generator is later changed or wrong.
+        with mock.patch(
+            "campusflow.storage.generate_ticket_id",
+            return_value=existing["id"],
+        ):
+            with self.assertRaisesRegex(ValueError, "already exists"):
+                create_and_save_ticket(
+                    "Printer jam",
+                    "hardware",
+                    "low",
+                    2,
+                    self.file_path,
+                )
+
+        self.assertEqual(self.file_path.read_bytes(), before)
+        self.assertEqual(len(load_tickets(self.file_path)), 1)
+
+    def test_ordinary_creation_is_unaffected(self):
+        """The guard must not reject the normal, non-colliding case."""
+        first = create_and_save_ticket(
+            "Wi-Fi is down",
+            "network",
+            "high",
+            12,
+            self.file_path,
+        )
+        second = create_and_save_ticket(
+            "Printer jam",
+            "hardware",
+            "low",
+            2,
+            self.file_path,
+        )
+
+        self.assertEqual([first["id"], second["id"]], ["T001", "T002"])
 
 
 if __name__ == "__main__":

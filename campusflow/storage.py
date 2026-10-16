@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 
 from campusflow.tickets import create_ticket
+from campusflow.validation import ASSIGNED_STATUS_LABELS
 
 
 DEFAULT_STORAGE_PATH = Path("data/tickets.json")
@@ -111,10 +112,11 @@ def load_tickets(file_path=DEFAULT_STORAGE_PATH):
                 "assigned_to must be None or a non-empty string."
             )
 
-        if ticket["status"] == "in_progress" and assigned_to is None:
+        if assigned_to is None and ticket["status"] in ASSIGNED_STATUS_LABELS:
             raise ValueError(
                 f"Invalid ticket at position {index}: "
-                "an in-progress ticket must be assigned."
+                f"{ASSIGNED_STATUS_LABELS[ticket['status']]} ticket must be "
+                "assigned."
             )
 
     return tickets
@@ -169,6 +171,17 @@ def create_and_save_ticket(
     """Create a validated ticket, assign its ID, save it, and return it."""
     tickets = load_tickets(file_path)
     ticket_id = generate_ticket_id(tickets)
+
+    # create_ticket() only sees the arguments it is handed, so it cannot know
+    # whether that ID is already taken in the collection it is about to join.
+    # The ID is derived from the collection above and should never collide, so
+    # reaching this means the generator is wrong rather than the caller. Fail
+    # here, before anything is appended or written, rather than save a second
+    # record under an ID that already exists.
+    if any(ticket.get("id") == ticket_id for ticket in tickets):
+        raise ValueError(
+            f"Ticket ID {ticket_id} already exists in the collection."
+        )
 
     ticket = create_ticket(
         ticket_id,
