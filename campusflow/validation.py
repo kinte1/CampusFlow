@@ -58,6 +58,15 @@ ALLOWED_TRANSITIONS = {
     "resolved": frozenset({"open"}),
 }
 
+# Statuses a ticket can only reach by being assigned, mapped to the wording
+# used in the error message. A ticket must be assigned before it can start,
+# and only in-progress tickets can be resolved, so both of these imply an
+# assignee. A stored record missing one is malformed even though it loads.
+ASSIGNED_STATUS_LABELS = {
+    "in_progress": "an in-progress",
+    "resolved": "a resolved",
+}
+
 
 def validate_title(title):
     """Return the trimmed title, or raise if it is not usable text."""
@@ -251,7 +260,14 @@ def can_transition(current, new):
     raise, because "no" is a normal answer here. Callers that need to reject
     an invalid transition should raise themselves, using the reason they
     have access to.
+
+    Anything that is not a string is not a status, so it answers False rather
+    than raising. That check has to come first: a list or dict is unhashable,
+    and the dictionary lookup below would raise TypeError on it.
     """
+    if not isinstance(current, str) or not isinstance(new, str):
+        return False
+
     if current not in ALLOWED_TRANSITIONS:
         return False
 
@@ -354,8 +370,11 @@ def validate_ticket(ticket):
             f"(stored {priority!r}, expected {expected_priority!r})."
         )
 
-    if status == "in_progress" and assigned_to is None:
-        raise ValueError(f"{label}: an in-progress ticket must be assigned.")
+    if assigned_to is None and status in ASSIGNED_STATUS_LABELS:
+        raise ValueError(
+            f"{label}: {ASSIGNED_STATUS_LABELS[status]} ticket must be "
+            "assigned."
+        )
 
     notes = validate_notes(ticket.get("notes", []), label)
 

@@ -171,6 +171,31 @@ class TestTicketStorage(unittest.TestCase):
         ):
             load_tickets(self.file_path)
 
+    def test_load_rejects_unassigned_resolved_ticket(self):
+        """Resolved is only reachable via in_progress, so it needs an owner."""
+        ticket = {
+            "id": "T001",
+            "title": "Wi-Fi problem",
+            "category": "Network",
+            "urgency": "high",
+            "affected_users": 12,
+            "priority": "critical",
+            "status": "resolved",
+            "assigned_to": None,
+        }
+
+        self.file_path.write_text(
+            json.dumps([ticket]),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "resolved ticket must be assigned",
+        ):
+            load_tickets(self.file_path)
+
+
 class TestTicketCreationIntegration(unittest.TestCase):
 
     def setUp(self):

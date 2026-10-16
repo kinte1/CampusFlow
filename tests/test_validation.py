@@ -68,6 +68,17 @@ class TestCanTransition(unittest.TestCase):
             with self.subTest(current=current, new=new):
                 self.assertFalse(can_transition(current, new))
 
+    def test_does_not_raise_on_unhashable_input(self):
+        """A list or dict is not a status, and the dict lookup would raise."""
+        for current, new in [
+            ([], "open"),
+            ({}, "open"),
+            ("open", []),
+            ("open", {}),
+        ]:
+            with self.subTest(current=current, new=new):
+                self.assertFalse(can_transition(current, new))
+
 
 class TestValidateTicket(unittest.TestCase):
     def test_accepts_a_valid_ticket(self):
@@ -122,6 +133,23 @@ class TestValidateTicket(unittest.TestCase):
 
         validated = validate_ticket(ticket)
 
+        self.assertEqual(validated["assigned_to"], "Grace")
+
+    def test_rejects_an_unassigned_resolved_ticket(self):
+        """Only in-progress tickets resolve, and those must be assigned."""
+        ticket = make_ticket(status="resolved", assigned_to=None)
+
+        with self.assertRaisesRegex(
+            ValueError, "resolved ticket must be assigned"
+        ):
+            validate_ticket(ticket)
+
+    def test_accepts_an_assigned_resolved_ticket(self):
+        ticket = make_ticket(status="resolved", assigned_to="Grace")
+
+        validated = validate_ticket(ticket)
+
+        self.assertEqual(validated["status"], "resolved")
         self.assertEqual(validated["assigned_to"], "Grace")
 
     def test_rejects_booleans_as_affected_users(self):

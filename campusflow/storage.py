@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 
 from campusflow.tickets import create_ticket
+from campusflow.validation import ASSIGNED_STATUS_LABELS
 
 
 DEFAULT_STORAGE_PATH = Path("data/tickets.json")
@@ -111,10 +112,11 @@ def load_tickets(file_path=DEFAULT_STORAGE_PATH):
                 "assigned_to must be None or a non-empty string."
             )
 
-        if ticket["status"] == "in_progress" and assigned_to is None:
+        if assigned_to is None and ticket["status"] in ASSIGNED_STATUS_LABELS:
             raise ValueError(
                 f"Invalid ticket at position {index}: "
-                "an in-progress ticket must be assigned."
+                f"{ASSIGNED_STATUS_LABELS[ticket['status']]} ticket must be "
+                "assigned."
             )
 
     return tickets
