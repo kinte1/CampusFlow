@@ -125,19 +125,51 @@ class TestTicketWorkflow(unittest.TestCase):
             ["Critical issue", "High issue", "Low issue"],
         )
 
-    def test_work_queue_excludes_resolved_tickets(self):
-        ticket = self.create_ticket("Resolved issue")
-        ticket_id = ticket["id"]
 
-        assign_staff(ticket_id, "Grace", self.file_path)
-        update_ticket_status(ticket_id, "in_progress", self.file_path)
-        update_ticket_status(ticket_id, "resolved", self.file_path)
+    def test_work_queue_includes_only_open_tickets(self):
+        """Only open tickets appear, in priority order."""
+        low_ticket = self.create_ticket("Low open issue")
+        critical_ticket = self.create_ticket(
+            "Critical open issue", "high", 10
+        )
+        in_progress_ticket = self.create_ticket(
+            "In-progress issue", "high", 1
+        )
+        resolved_ticket = self.create_ticket(
+            "Resolved issue", "high", 10
+        )
+
+        assign_staff(
+            in_progress_ticket["id"], "Grace", self.file_path
+        )
+        update_ticket_status(
+            in_progress_ticket["id"],
+            "in_progress",
+            self.file_path,
+        )
+
+        assign_staff(
+            resolved_ticket["id"], "David", self.file_path
+        )
+        update_ticket_status(
+            resolved_ticket["id"],
+            "in_progress",
+            self.file_path,
+        )
+        update_ticket_status(
+            resolved_ticket["id"],
+            "resolved",
+            self.file_path,
+        )
 
         queue = get_work_queue(self.file_path)
 
-        self.assertEqual(queue, [])
+        self.assertEqual(
+            [ticket["id"] for ticket in queue],
+            [critical_ticket["id"], low_ticket["id"]],
+        )
 
-    
+
     def test_work_queue_sorts_ticket_ids_numerically(self):
         """Same-priority tickets are sorted by numeric ID."""
         self.create_ticket("Ticket ten")
@@ -154,7 +186,6 @@ class TestTicketWorkflow(unittest.TestCase):
             [ticket["id"] for ticket in queue],
             ["T002", "T010"],
         )
-
 
     def test_reject_invalid_status(self):
         ticket = self.create_ticket("Wi-Fi issue")

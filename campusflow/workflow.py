@@ -100,16 +100,16 @@ def reopen_ticket(ticket_id, file_path=DEFAULT_STORAGE_PATH):
 
 
 def get_work_queue(file_path=DEFAULT_STORAGE_PATH):
-    """Return unresolved tickets in priority and ID order."""
+    """Return open tickets in priority and ID order."""
     tickets = load_tickets(file_path)
 
-    unresolved = [
+    open_tickets = [
         ticket for ticket in tickets
-        if ticket["status"] != "resolved"
+        if ticket["status"] == "open"
     ]
 
     return sorted(
-        unresolved,
+        open_tickets,
         key=lambda ticket: (
             PRIORITY_ORDER[ticket["priority"]],
             int(ticket["id"][1:]),
