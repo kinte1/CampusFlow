@@ -38,7 +38,7 @@ The main goals are to:
 - Generate unique ticket identifiers.
 - Assign tickets to staff members.
 - Enforce valid ticket status transitions.
-- Organize unresolved tickets into a priority-based work queue.
+- Organize open tickets into a priority-based work queue.
 - Save and load tickets using JSON.
 - Generate useful reports and statistics.
 - Maintain readable, modular, and testable Python code.
@@ -295,7 +295,7 @@ Responsibilities:
 - Manage ticket status transitions.
 - Enforce workflow rules.
 - Support explicit reopening of resolved tickets.
-- Build the unresolved ticket queue.
+- Build the open ticket queue.
 - Sort tickets by priority and numeric ticket ID.
 
 **`tests/test_workflow.py`**
@@ -305,7 +305,7 @@ Responsibilities:
 - Test staff assignment.
 - Test valid and invalid status transitions.
 - Test reopening behavior.
-- Test unresolved queue filtering.
+- Test open-ticket queue filtering.
 - Test queue sorting and tie-breaking.
 
 **`campusflow/reports.py`**
@@ -585,7 +585,7 @@ This agreement will reduce integration conflicts and duplicated work.
 - Implement automatic priority calculation.
 - Implement JSON persistence.
 - Implement staff assignment and ticket lifecycle management.
-- Implement the unresolved work queue.
+- Implement the open work queue.
 - Implement reports and statistics.
 - Build the command-line interface.
 - Write and run automated tests.
@@ -654,7 +654,7 @@ The menu allows users to:
 4. Start work on an assigned ticket.
 5. Resolve an in-progress ticket.
 6. Reopen a resolved ticket.
-7. View the unresolved work queue, sorted by priority and ticket ID.
+7. View the open work queue, sorted by priority and ticket ID.
 8. View ticket totals and counts by status and priority.
 
 Tickets are saved in `data/tickets.json`. If the file does not exist, the application starts with an empty ticket list.

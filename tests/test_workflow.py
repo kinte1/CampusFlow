@@ -125,11 +125,19 @@ class TestTicketWorkflow(unittest.TestCase):
             ["Critical issue", "High issue", "Low issue"],
         )
 
+
     def test_work_queue_includes_only_open_tickets(self):
-        """The queue excludes in-progress and resolved tickets."""
-        open_ticket = self.create_ticket("Open issue")
-        in_progress_ticket = self.create_ticket("In-progress issue")
-        resolved_ticket = self.create_ticket("Resolved issue")
+        """Only open tickets appear, in priority order."""
+        low_ticket = self.create_ticket("Low open issue")
+        critical_ticket = self.create_ticket(
+            "Critical open issue", "high", 10
+        )
+        in_progress_ticket = self.create_ticket(
+            "In-progress issue", "high", 1
+        )
+        resolved_ticket = self.create_ticket(
+            "Resolved issue", "high", 10
+        )
 
         assign_staff(
             in_progress_ticket["id"], "Grace", self.file_path
@@ -158,8 +166,9 @@ class TestTicketWorkflow(unittest.TestCase):
 
         self.assertEqual(
             [ticket["id"] for ticket in queue],
-            [open_ticket["id"]],
+            [critical_ticket["id"], low_ticket["id"]],
         )
+
 
     def test_work_queue_sorts_ticket_ids_numerically(self):
         """Same-priority tickets are sorted by numeric ID."""
