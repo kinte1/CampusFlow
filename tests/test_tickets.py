@@ -124,8 +124,21 @@ class TestCreateTicket(unittest.TestCase):
                 "priority": "critical",
                 "status": "open",
                 "assigned_to": None,
+                "notes": [],
             },
         )
+
+    def test_starts_with_no_notes(self):
+        """A new ticket carries the field so note IDs derive from it."""
+        ticket = create_ticket(
+            "T001",
+            "Wi-Fi problem",
+            "Network",
+            "high",
+            12,
+        )
+
+        self.assertEqual(ticket["notes"], [])
 
     def test_rejects_blank_ticket_id(self):
         with self.assertRaises(ValueError):
