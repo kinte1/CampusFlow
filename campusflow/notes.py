@@ -53,6 +53,30 @@ def _note_number(note):
     return int(note_id[1:]) if match else 0
 
 
+def _notes_of(ticket):
+    """Return a ticket's notes list, supplying one only when it is absent.
+
+    An absent key means a record written before the field existed, so an
+    empty list loses nothing. A key that is present but unusable is a
+    different case: it is a malformed record, and reading it as "no notes"
+    would hide that in get_notes and destroy it in add_note, which saves.
+    The rest of the project refuses unusable data rather than quietly
+    replacing it, so this does too.
+    """
+    if "notes" not in ticket:
+        return []
+
+    notes = ticket["notes"]
+
+    if not isinstance(notes, list):
+        raise ValueError(
+            f"Ticket {ticket['id']} has an unusable notes value: expected "
+            f"a list, found {type(notes).__name__}."
+        )
+
+    return notes
+
+
 def next_note_id(ticket):
     """Return the next free note ID for a ticket, derived from its notes.
 
@@ -87,13 +111,11 @@ def add_note(ticket_id, author, message, file_path=DEFAULT_STORAGE_PATH):
             "Reopen the ticket before adding a note to a resolved ticket."
         )
 
-    notes = ticket.get("notes")
+    notes = _notes_of(ticket)
 
-    if not isinstance(notes, list):
-        # A legacy record has no notes key yet, and an unusable value is
-        # treated the same way rather than crashing on append.
-        notes = []
-        ticket["notes"] = notes
+    # A legacy ticket gains the key here. Doing it before the ID is derived
+    # keeps next_note_id working from the ticket's real notes.
+    ticket["notes"] = notes
 
     note = {
         "note_id": next_note_id(ticket),
@@ -112,13 +134,10 @@ def get_notes(ticket_id, file_path=DEFAULT_STORAGE_PATH):
 
     Ordering is numeric rather than by text, because "N010" sorts before
     "N002" as a string. Unusable IDs sort first and keep their stored order.
+    A ticket whose notes value is unusable is refused rather than reported
+    as a ticket with no notes.
     """
     tickets = load_tickets(file_path)
     ticket = _find_ticket(tickets, ticket_id)
 
-    notes = ticket.get("notes")
-
-    if not isinstance(notes, list):
-        return []
-
-    return sorted(notes, key=_note_number)
+    return sorted(_notes_of(ticket), key=_note_number)

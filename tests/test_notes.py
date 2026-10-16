@@ -345,5 +345,101 @@ class TestNotesAcrossTicketStatus(unittest.TestCase):
         self.assertEqual(ids, ["N001", "N002"])
 
 
+class TestMalformedStoredNotes(unittest.TestCase):
+    """Review regression: a malformed notes value must not read as empty.
+
+    An absent key is a legacy record and safely means "no notes yet". A key
+    that is present but unusable is a corrupt record: reading it as an empty
+    ticket hides the corruption in get_notes, and add_note would save over
+    it. The two cases were treated alike until review, so these tests hold
+    the distinction in place.
+    """
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.file_path = Path(self.temp_dir.name) / "tickets.json"
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def stored_bytes(self):
+        """Return the raw file contents, for an exact comparison."""
+        return self.file_path.read_bytes()
+
+    def stored_ticket(self, **extra):
+        """Build a stored ticket, carrying a notes key only if given one."""
+        ticket = {
+            "id": "T001",
+            "title": "Wi-Fi is down",
+            "category": "Network",
+            "urgency": "high",
+            "affected_users": 12,
+            "priority": "critical",
+            "status": "open",
+            "assigned_to": None,
+        }
+
+        ticket.update(extra)
+
+        return ticket
+
+    def write(self, ticket):
+        """Write one ticket to the file, as a corrupt or legacy writer would.
+
+        Going straight to JSON is the point: load_tickets does not validate
+        notes yet, so this is how such a record reaches the module.
+        """
+        self.file_path.write_text(
+            json.dumps([ticket]),
+            encoding="utf-8",
+        )
+
+    def add(self, message="Switch ports replaced", author="Mentor A"):
+        """Add a note to the fixture ticket and return it."""
+        return add_note("T001", author, message, self.file_path)
+
+    def test_add_note_refuses_a_notes_string(self):
+        self.write(self.stored_ticket(notes="oops"))
+        before = self.stored_bytes()
+
+        with self.assertRaisesRegex(ValueError, "unusable"):
+            self.add()
+
+        self.assertEqual(self.stored_bytes(), before)
+
+    def test_add_note_refuses_a_notes_dictionary(self):
+        self.write(self.stored_ticket(notes={"N001": "oops"}))
+        before = self.stored_bytes()
+
+        with self.assertRaisesRegex(ValueError, "unusable"):
+            self.add()
+
+        self.assertEqual(self.stored_bytes(), before)
+
+    def test_get_notes_refuses_a_notes_string(self):
+        self.write(self.stored_ticket(notes="oops"))
+
+        with self.assertRaisesRegex(ValueError, "unusable"):
+            get_notes("T001", self.file_path)
+
+    def test_get_notes_refuses_an_empty_notes_dictionary(self):
+        """The emptiest malformed value must not read as "no notes"."""
+        self.write(self.stored_ticket(notes={}))
+
+        with self.assertRaisesRegex(ValueError, "unusable"):
+            get_notes("T001", self.file_path)
+
+    def test_a_record_with_no_notes_key_is_still_accepted(self):
+        """The legacy case the empty-list default exists for."""
+        self.write(self.stored_ticket())
+
+        self.assertEqual(get_notes("T001", self.file_path), [])
+
+        note = self.add()
+
+        self.assertEqual(note["note_id"], "N001")
+        self.assertEqual(get_notes("T001", self.file_path), [note])
+
+
 if __name__ == "__main__":
     unittest.main()
