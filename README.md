@@ -91,20 +91,24 @@ The workflow will follow these rules:
 
 ### 5. Priority-Based Work Queue
 
-The application will provide a queue of unresolved tickets.
+The application provides a work queue containing only tickets with an
+`open` status that are awaiting work.
 
-Tickets will be sorted using the following rules:
+Tickets are sorted using the following priority order:
 
 1. Critical priority.
 2. High priority.
 3. Medium priority.
 4. Low priority.
 
-When two tickets have the same priority, the ticket with the lower numeric ID will appear first.
+When two tickets have the same priority, the ticket with the lower
+numeric ID appears first.
 
-For example, `T002` will appear before `T005` when both tickets have the same priority.
+For example, `T002` appears before `T005` when both tickets have
+the same priority.
 
-Resolved tickets will not appear in the unresolved work queue.
+Tickets with `in_progress` or `resolved` status do not appear in
+the work queue.
 
 ### 6. Reports and Statistics
 
