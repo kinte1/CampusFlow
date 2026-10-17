@@ -7,6 +7,8 @@ from campusflow.workflow import (
     update_ticket_status,
 )
 from campusflow.reports import print_report
+from campusflow.search import search_tickets
+from campusflow.validation import CATEGORIES, STATUSES, PRIORITIES
 
 
 def show_tickets(tickets):
@@ -24,6 +26,50 @@ def show_tickets(tickets):
         )
 
 
+def prompt_optional_filter(label, options):
+    """Ask for an optional filter and retry invalid choices."""
+    print(f"\nAvailable {label.lower()} options: {', '.join(options)}")
+
+    while True:
+        value = input(
+            f"{label} (press Enter to skip): "
+        ).strip()
+
+        if not value:
+            return None
+
+        for option in options:
+            if value.casefold() == option.casefold():
+                return option
+
+        print(
+            f"Invalid {label.lower()}. "
+            f"Choose one of: {', '.join(options)}, or press Enter to skip."
+        )
+
+
+def search_tickets_menu():
+    """Collect search criteria and display matching tickets."""
+    query = input(
+        "\nTitle contains (press Enter to skip): "
+    ).strip()
+
+    category = prompt_optional_filter("Category", CATEGORIES)
+    status = prompt_optional_filter("Status", STATUSES)
+    priority = prompt_optional_filter("Priority", PRIORITIES)
+
+    results = search_tickets(
+        query=query,
+        category=category,
+        status=status,
+        priority=priority,
+    )
+
+    print("\n=== SEARCH RESULTS ===")
+    print("Results are sorted by priority, then ticket ID.")
+    show_tickets(results)
+
+
 def main():
     while True:
         print("\n=== CAMPUSFLOW ===")
@@ -35,6 +81,7 @@ def main():
         print("6. Reopen ticket")
         print("7. View work queue")
         print("8. View report")
+        print("9. Search tickets")
         print("0. Exit")
 
         choice = input("Choose an option: ").strip()
@@ -82,6 +129,9 @@ def main():
 
             elif choice == "8":
                 print_report()
+
+            elif choice == "9":
+                search_tickets_menu()
 
             elif choice == "0":
                 print("Goodbye!")
