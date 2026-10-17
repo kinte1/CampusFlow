@@ -121,6 +121,21 @@ class TestTicketSearch(unittest.TestCase):
             ],
         )
 
+    def test_results_can_be_sorted_by_numeric_ticket_id(self):
+        results = search_tickets(
+            file_path=self.file_path,
+            sort_by_priority=False,
+        )
+
+        self.assertEqual(
+            [ticket["id"] for ticket in results],
+            [
+                self.wifi["id"],
+                self.printer["id"],
+                self.software["id"],
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

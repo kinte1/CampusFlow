@@ -1,3 +1,4 @@
+
 from campusflow.storage import DEFAULT_STORAGE_PATH, load_tickets
 from campusflow.validation import PRIORITY_ORDER
 
@@ -8,12 +9,14 @@ def search_tickets(
     status=None,
     priority=None,
     file_path=DEFAULT_STORAGE_PATH,
+    sort_by_priority=True,
 ):
     """Return tickets matching a title and all supplied filters.
 
     Title matching is case-insensitive substring matching.
     Supplied filters are combined using AND logic.
-    Results are sorted by priority and then ticket ID.
+    Results are sorted by priority and ticket ID by default.
+    Set sort_by_priority=False to sort by numeric ticket ID instead.
     Searching does not modify stored tickets.
     """
     tickets = load_tickets(file_path)
@@ -36,11 +39,16 @@ def search_tickets(
 
         results.append(ticket)
 
-    results.sort(
-        key=lambda ticket: (
-            PRIORITY_ORDER[ticket["priority"]],
-            int(ticket["id"][1:]),
+    if sort_by_priority:
+        results.sort(
+            key=lambda ticket: (
+                PRIORITY_ORDER[ticket["priority"]],
+                int(ticket["id"][1:]),
+            )
         )
-    )
+    else:
+        results.sort(
+            key=lambda ticket: int(ticket["id"][1:])
+        )
 
     return results
