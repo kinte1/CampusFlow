@@ -16,9 +16,24 @@ class TestReports(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def create_ticket(self, title, urgency, affected_users):
+    def create_ticket(
+        self, title, urgency, affected_users, category="Network"
+    ):
         return create_and_save_ticket(
-            title, "Network", urgency, affected_users, self.file_path
+            title,
+            category,
+            urgency,
+            affected_users,
+            self.file_path,
+        )
+
+    def resolve_ticket(self, ticket):
+        assign_staff(ticket["id"], "Grace", self.file_path)
+        update_ticket_status(
+            ticket["id"], "in_progress", self.file_path
+        )
+        update_ticket_status(
+            ticket["id"], "resolved", self.file_path
         )
 
     def test_empty_report_contains_all_counts(self):
@@ -27,6 +42,10 @@ class TestReports(unittest.TestCase):
         self.assertEqual(report["total"], 0)
         self.assertEqual(report["by_status"]["open"], 0)
         self.assertEqual(report["by_priority"]["critical"], 0)
+        self.assertEqual(report["by_category"]["Network"], 0)
+        self.assertEqual(report["unresolved"], 0)
+        self.assertEqual(report["resolved"], 0)
+        self.assertEqual(report["resolution_percentage"], 0.0)
 
     def test_report_counts_created_tickets(self):
         self.create_ticket("Wi-Fi problem", "high", 10)
@@ -38,22 +57,67 @@ class TestReports(unittest.TestCase):
         self.assertEqual(report["by_status"]["open"], 2)
         self.assertEqual(report["by_priority"]["critical"], 1)
         self.assertEqual(report["by_priority"]["low"], 1)
+        self.assertEqual(report["unresolved"], 2)
+        self.assertEqual(report["resolved"], 0)
+        self.assertEqual(report["resolution_percentage"], 0.0)
 
     def test_report_counts_resolved_tickets(self):
-        ticket = self.create_ticket("Network problem", "medium", 3)
-        assign_staff(ticket["id"], "Grace", self.file_path)
-        update_ticket_status(
-            ticket["id"], "in_progress", self.file_path
+        ticket = self.create_ticket(
+            "Network problem", "medium", 3
         )
-        update_ticket_status(
-            ticket["id"], "resolved", self.file_path
-        )
+        self.resolve_ticket(ticket)
 
         report = generate_report(self.file_path)
 
         self.assertEqual(report["total"], 1)
         self.assertEqual(report["by_status"]["resolved"], 1)
         self.assertEqual(report["by_status"]["open"], 0)
+        self.assertEqual(report["unresolved"], 0)
+        self.assertEqual(report["resolved"], 1)
+        self.assertEqual(report["resolution_percentage"], 100.0)
+
+    def test_report_counts_tickets_by_category(self):
+        self.create_ticket(
+            "Wi-Fi problem", "high", 10, "Network"
+        )
+        self.create_ticket(
+            "Router problem", "medium", 3, "Network"
+        )
+        self.create_ticket(
+            "Broken laptop", "low", 1, "Hardware"
+        )
+
+        report = generate_report(self.file_path)
+
+        self.assertEqual(report["by_category"]["Network"], 2)
+        self.assertEqual(report["by_category"]["Hardware"], 1)
+        self.assertEqual(report["by_category"]["Software"], 0)
+        self.assertEqual(report["by_category"]["Other"], 0)
+
+    def test_resolution_percentage_with_mixed_statuses(self):
+        resolved_ticket = self.create_ticket(
+            "Resolved issue", "medium", 3
+        )
+        self.resolve_ticket(resolved_ticket)
+        self.create_ticket("Open issue", "low", 1)
+        in_progress_ticket = self.create_ticket(
+            "Active issue", "medium", 3
+        )
+        assign_staff(
+            in_progress_ticket["id"], "Sam", self.file_path
+        )
+        update_ticket_status(
+            in_progress_ticket["id"],
+            "in_progress",
+            self.file_path,
+        )
+
+        report = generate_report(self.file_path)
+
+        self.assertEqual(report["total"], 3)
+        self.assertEqual(report["resolved"], 1)
+        self.assertEqual(report["unresolved"], 2)
+        self.assertEqual(report["resolution_percentage"], 33.33)
 
 
 if __name__ == "__main__":
