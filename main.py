@@ -7,6 +7,7 @@ from campusflow.workflow import (
     update_ticket_status,
 )
 from campusflow.reports import print_report
+from campusflow.understanding_check import run as run_understanding_check
 
 
 def show_tickets(tickets):
@@ -35,6 +36,7 @@ def main():
         print("6. Reopen ticket")
         print("7. View work queue")
         print("8. View report")
+        print("13. Engineering Understanding Check")
         print("0. Exit")
 
         choice = input("Choose an option: ").strip()
@@ -82,6 +84,9 @@ def main():
 
             elif choice == "8":
                 print_report()
+
+            elif choice == "13":
+                run_understanding_check()
 
             elif choice == "0":
                 print("Goodbye!")
