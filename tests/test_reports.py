@@ -36,7 +36,13 @@ class TestReports(unittest.TestCase):
         self.assertEqual(report["by_category"]["Network"], 0)
         self.assertEqual(report["unresolved"], 0)
         self.assertEqual(report["resolved"], 0)
-        self.assertEqual(report["resolution_pct"], 0.0)
+        self.assertEqual(report["resolution_percentage"], 0.0)
+
+    def test_report_uses_the_contract_key_names(self):
+        report = generate_report(self.file_path)
+
+        self.assertIn("resolution_percentage", report)
+        self.assertNotIn("resolution_pct", report)
 
     def test_report_counts_created_tickets(self):
         self.create_ticket("Wi-Fi problem", "high", 10)
@@ -51,7 +57,7 @@ class TestReports(unittest.TestCase):
         self.assertEqual(report["by_category"]["Network"], 2)
         self.assertEqual(report["unresolved"], 2)
         self.assertEqual(report["resolved"], 0)
-        self.assertEqual(report["resolution_pct"], 0.0)
+        self.assertEqual(report["resolution_percentage"], 0.0)
 
     def test_report_counts_resolved_tickets(self):
         ticket = self.create_ticket("Network problem", "medium", 3)
@@ -70,7 +76,7 @@ class TestReports(unittest.TestCase):
         self.assertEqual(report["by_status"]["open"], 0)
         self.assertEqual(report["unresolved"], 0)
         self.assertEqual(report["resolved"], 1)
-        self.assertEqual(report["resolution_pct"], 100.0)
+        self.assertEqual(report["resolution_percentage"], 100.0)
 
     def test_report_counts_tickets_by_category(self):
         self.create_ticket(
@@ -116,7 +122,7 @@ class TestReports(unittest.TestCase):
         self.assertEqual(report["total"], 3)
         self.assertEqual(report["resolved"], 1)
         self.assertEqual(report["unresolved"], 2)
-        self.assertAlmostEqual(report["resolution_pct"], 33.33, places=2)
+        self.assertEqual(report["resolution_percentage"], 33.3)
 
 
 if __name__ == "__main__":
