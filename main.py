@@ -1,4 +1,5 @@
 
+from campusflow.notes import add_note, get_notes
 from campusflow.storage import create_and_save_ticket, load_tickets
 from campusflow.workflow import (
     assign_staff,
@@ -7,7 +8,7 @@ from campusflow.workflow import (
     update_ticket_status,
 )
 from campusflow.reports import print_report
-from campusflow.search import search_tickets
+from campusflow.search import search_tickets, sort_by_priority_then_id
 from campusflow.understanding_check import run as run_understanding_check
 from campusflow.validation import CATEGORIES, STATUSES, PRIORITIES
 
@@ -49,8 +50,39 @@ def prompt_optional_filter(label, options):
         )
 
 
-def search_tickets_menu():
-    """Collect search criteria and display matching tickets."""
+def add_note_menu():
+    """Collect note details and save a follow-up note."""
+    ticket_id = input("Ticket ID: ")
+    author = input("Author: ")
+    message = input("Note: ")
+
+    note = add_note(ticket_id, author, message)
+
+    print(
+        f"Added note {note['note_id']} to ticket {ticket_id.strip()}."
+    )
+
+
+def view_notes_menu():
+    """Display a ticket's notes in note-ID order."""
+    ticket_id = input("Ticket ID: ")
+    notes = get_notes(ticket_id)
+
+    if not notes:
+        print(f"\nNo notes found for ticket {ticket_id.strip()}.")
+        return
+
+    print(f"\n=== NOTES FOR TICKET {ticket_id.strip()} ===")
+
+    for note in notes:
+        print(
+            f"\n{note['note_id']} - {note['author']}\n"
+            f"  {note['message']}"
+        )
+
+
+def prompt_search_criteria():
+    """Collect a title query and optional search filters."""
     query = input(
         "\nTitle contains (press Enter to skip): "
     ).strip()
@@ -59,17 +91,39 @@ def search_tickets_menu():
     status = prompt_optional_filter("Status", STATUSES)
     priority = prompt_optional_filter("Priority", PRIORITIES)
 
-    results = search_tickets(
-        load_tickets(),
-        query=query,
-        category=category,
-        status=status,
-        priority=priority,
-    )
+    return {
+        "query": query,
+        "category": category,
+        "status": status,
+        "priority": priority,
+    }
 
-    print("\n=== SEARCH RESULTS ===")
-    print("Results are sorted by priority, then ticket ID.")
+
+def run_search(sorted_by_priority):
+    """Collect search criteria, search, and display matching tickets."""
+    criteria = prompt_search_criteria()
+    results = search_tickets(load_tickets(), **criteria)
+
+    if sorted_by_priority:
+        # search_tickets already returns priority order (B-2). Sorting the
+        # results again keeps this view's guarantee explicit, and stays
+        # correct if the search's own ordering ever changes.
+        results = sort_by_priority_then_id(results)
+        print("\n=== SEARCH RESULTS (SORTED BY PRIORITY) ===")
+    else:
+        print("\n=== SEARCH RESULTS ===")
+
     show_tickets(results)
+
+
+def search_tickets_menu():
+    """Search tickets and display matching tickets."""
+    run_search(sorted_by_priority=False)
+
+
+def sorted_search_menu():
+    """Search tickets and display results sorted by priority."""
+    run_search(sorted_by_priority=True)
 
 
 def main():
@@ -84,6 +138,9 @@ def main():
         print("7. View work queue")
         print("8. View report")
         print("9. Search tickets")
+        print("10. Add follow-up note")
+        print("11. View ticket notes")
+        print("12. Search results sorted by priority")
         print("13. Engineering Understanding Check")
         print("0. Exit")
 
@@ -135,6 +192,15 @@ def main():
 
             elif choice == "9":
                 search_tickets_menu()
+
+            elif choice == "10":
+                add_note_menu()
+
+            elif choice == "11":
+                view_notes_menu()
+
+            elif choice == "12":
+                sorted_search_menu()
 
             elif choice == "13":
                 run_understanding_check()
