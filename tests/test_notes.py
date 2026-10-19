@@ -353,6 +353,12 @@ class TestMalformedStoredNotes(unittest.TestCase):
     ticket hides the corruption in get_notes, and add_note would save over
     it. The two cases were treated alike until review, so these tests hold
     the distinction in place.
+
+    Since #11 the refusal happens earlier. load_tickets validates every
+    record through validate_ticket, so these calls are now rejected at the
+    load boundary and never reach notes.py. The tests still assert the
+    behaviour that matters — refuse, and change nothing — but the message
+    they match on is the loader's.
     """
 
     def setUp(self):
@@ -386,8 +392,9 @@ class TestMalformedStoredNotes(unittest.TestCase):
     def write(self, ticket):
         """Write one ticket to the file, as a corrupt or legacy writer would.
 
-        Going straight to JSON is the point: load_tickets does not validate
-        notes yet, so this is how such a record reaches the module.
+        Going straight to JSON is the point: this is how a record that no
+        save_tickets call would have allowed reaches the loader, which is
+        where the malformed ones are now refused.
         """
         self.file_path.write_text(
             json.dumps([ticket]),
@@ -402,7 +409,7 @@ class TestMalformedStoredNotes(unittest.TestCase):
         self.write(self.stored_ticket(notes="oops"))
         before = self.stored_bytes()
 
-        with self.assertRaisesRegex(ValueError, "unusable"):
+        with self.assertRaisesRegex(ValueError, "notes must be a list"):
             self.add()
 
         self.assertEqual(self.stored_bytes(), before)
@@ -411,7 +418,7 @@ class TestMalformedStoredNotes(unittest.TestCase):
         self.write(self.stored_ticket(notes={"N001": "oops"}))
         before = self.stored_bytes()
 
-        with self.assertRaisesRegex(ValueError, "unusable"):
+        with self.assertRaisesRegex(ValueError, "notes must be a list"):
             self.add()
 
         self.assertEqual(self.stored_bytes(), before)
@@ -419,14 +426,14 @@ class TestMalformedStoredNotes(unittest.TestCase):
     def test_get_notes_refuses_a_notes_string(self):
         self.write(self.stored_ticket(notes="oops"))
 
-        with self.assertRaisesRegex(ValueError, "unusable"):
+        with self.assertRaisesRegex(ValueError, "notes must be a list"):
             get_notes("T001", self.file_path)
 
     def test_get_notes_refuses_an_empty_notes_dictionary(self):
         """The emptiest malformed value must not read as "no notes"."""
         self.write(self.stored_ticket(notes={}))
 
-        with self.assertRaisesRegex(ValueError, "unusable"):
+        with self.assertRaisesRegex(ValueError, "notes must be a list"):
             get_notes("T001", self.file_path)
 
     def test_a_record_with_no_notes_key_is_still_accepted(self):
