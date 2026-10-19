@@ -1,23 +1,68 @@
-from campusflow.storage import DEFAULT_STORAGE_PATH, load_tickets
-from campusflow.validation import PRIORITY_ORDER
+from campusflow.validation import (
+    CATEGORIES,
+    PRIORITIES,
+    PRIORITY_ORDER,
+    STATUSES,
+)
+
+
+def _normalise_filter(value, options, label):
+    """Return value in its canonical spelling, or None when unsupplied."""
+    if value is None:
+        return None
+
+    if not isinstance(value, str):
+        raise ValueError(
+            f"{label} must be a string, found {type(value).__name__}."
+        )
+
+    value = value.strip()
+
+    if not value:
+        return None
+
+    for option in options:
+        if value.casefold() == option.casefold():
+            return option
+
+    raise ValueError(
+        f"Unknown {label.lower()} {value!r}. "
+        f"Choose one of: {', '.join(options)}."
+    )
+
+
+def sort_by_priority_then_id(tickets):
+    """Return a new list ordered by priority, then numeric ticket ID.
+
+    The ticket ID is compared numerically, because "T10" sorts before "T2"
+    as text.
+    """
+    return sorted(
+        tickets,
+        key=lambda ticket: (
+            PRIORITY_ORDER[ticket["priority"]],
+            int(ticket["id"][1:]),
+        ),
+    )
 
 
 def search_tickets(
-    query="",
+    tickets,
+    query=None,
     category=None,
     status=None,
     priority=None,
-    file_path=DEFAULT_STORAGE_PATH,
 ):
     """Return tickets matching a title and all supplied filters.
 
-    Title matching is case-insensitive substring matching.
-    Supplied filters are combined using AND logic.
-    Results are sorted by priority and then ticket ID.
-    Searching does not modify stored tickets.
+    Title matching is case-insensitive substring matching. Supplied filters
+    are combined using AND logic, and their values are matched without
+    regard to case. The input list is not modified.
     """
-    tickets = load_tickets(file_path)
-    query = query.strip().casefold()
+    query = (query or "").strip().casefold()
+    category = _normalise_filter(category, CATEGORIES, "Category")
+    status = _normalise_filter(status, STATUSES, "Status")
+    priority = _normalise_filter(priority, PRIORITIES, "Priority")
 
     results = []
 
@@ -36,11 +81,4 @@ def search_tickets(
 
         results.append(ticket)
 
-    results.sort(
-        key=lambda ticket: (
-            PRIORITY_ORDER[ticket["priority"]],
-            int(ticket["id"][1:]),
-        )
-    )
-
-    return results
+    return sort_by_priority_then_id(results)

@@ -59,6 +59,7 @@ def search_tickets_menu():
     priority = prompt_optional_filter("Priority", PRIORITIES)
 
     results = search_tickets(
+        load_tickets(),
         query=query,
         category=category,
         status=status,

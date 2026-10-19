@@ -5,7 +5,11 @@ from unittest.mock import patch
 import main
 
 
+TICKETS = [{"id": "T900"}]
+
+
 class TestSearchTicketsMenu(unittest.TestCase):
+    @patch("main.load_tickets", return_value=TICKETS)
     @patch("builtins.print")
     @patch("builtins.input", side_effect=[
         "wifi",
@@ -15,7 +19,7 @@ class TestSearchTicketsMenu(unittest.TestCase):
     ])
     @patch("main.search_tickets")
     def test_search_passes_filters_to_search_function(
-        self, mock_search, mock_input, mock_print
+        self, mock_search, mock_input, mock_print, mock_load_tickets
     ):
         mock_search.return_value = [
             {
@@ -30,7 +34,10 @@ class TestSearchTicketsMenu(unittest.TestCase):
 
         main.search_tickets_menu()
 
+        mock_load_tickets.assert_called_once_with()
+
         mock_search.assert_called_once_with(
+            TICKETS,
             query="wifi",
             category="Network",
             status="in_progress",
@@ -43,6 +50,7 @@ class TestSearchTicketsMenu(unittest.TestCase):
         self.assertIn("T001", printed_output)
         self.assertIn("Wi-Fi connection problem", printed_output)
 
+    @patch("main.load_tickets", return_value=TICKETS)
     @patch("builtins.print")
     @patch("builtins.input", side_effect=[
         " ",
@@ -55,13 +63,14 @@ class TestSearchTicketsMenu(unittest.TestCase):
     ])
     @patch("main.search_tickets")
     def test_invalid_filters_are_retried_and_normalized(
-        self, mock_search, mock_input, mock_print
+        self, mock_search, mock_input, mock_print, mock_load_tickets
     ):
         mock_search.return_value = []
 
         main.search_tickets_menu()
 
         mock_search.assert_called_once_with(
+            TICKETS,
             query="",
             category="Hardware",
             status="open",
@@ -75,17 +84,19 @@ class TestSearchTicketsMenu(unittest.TestCase):
         self.assertIn("Invalid status", printed_output)
         self.assertIn("Invalid priority", printed_output)
 
+    @patch("main.load_tickets", return_value=TICKETS)
     @patch("builtins.print")
     @patch("builtins.input", side_effect=["", "", "", ""])
     @patch("main.search_tickets")
     def test_blank_filters_are_allowed(
-        self, mock_search, mock_input, mock_print
+        self, mock_search, mock_input, mock_print, mock_load_tickets
     ):
         mock_search.return_value = []
 
         main.search_tickets_menu()
 
         mock_search.assert_called_once_with(
+            TICKETS,
             query="",
             category=None,
             status=None,
