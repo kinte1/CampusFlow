@@ -21,9 +21,12 @@ Each ticket contains the following fields:
 - `priority`: Calculated severity level.
 - `status`: Current ticket status, initially `open`.
 - `assigned_to`: Staff member responsible for the ticket, initially `None`.
+- `notes`: Follow-up notes, initially an empty list. Each note has a
+  `note_id` (`N001`, `N002`, ...), an `author`, and a `message`.
 
 Ticket IDs are generated automatically to help ensure that every ticket
-can be identified separately.
+can be identified separately. Note IDs are derived from the notes already
+stored on the ticket, so a reload does not reset the sequence.
 
 ## 3. Input Validation
 
@@ -75,8 +78,25 @@ The storage system follows these rules:
   ticket list.
 - Existing tickets are loaded from the JSON file.
 - Malformed JSON raises an error rather than silently discarding data.
+- Every record passes the same validation on load that ticket creation
+  applies, including the priority rule and the note shape.
+- Records with duplicate ticket IDs, or notes with duplicate note IDs
+  within one ticket, are rejected.
 - Saving uses a temporary file before replacing the destination to reduce
   the risk of leaving partially written data.
+
+Two versions of the stored format exist. Version 1 (the original sprint
+format) has the eight ticket fields and no `notes` key. Version 2 adds
+`notes`. A version 1 record is migrated in memory: it is read with an
+empty notes list. The file itself is not rewritten on load, so a read
+never changes stored data; the next save writes the version 2 form.
+No stored information is discarded during that migration.
+
+Validation happens before any filesystem work on save. A refused save
+neither creates the data directory nor writes a temporary file, and leaves
+the existing file untouched. The validated, normalised copies are what get
+written, so save and load are symmetric and the file on disk is always in
+canonical form.
 
 The file `data/tickets.json` is excluded from Git so that locally generated
 ticket data is not accidentally committed to the repository.
@@ -145,12 +165,17 @@ invalid status transitions.
 
 ## 9. Work Queue and Reports
 
-The work queue displays unresolved tickets in priority order:
+The work queue displays tickets whose status is `open`, in priority order:
 
 1. Critical
 2. High
 3. Medium
 4. Low
+
+Only open tickets appear. An `in_progress` ticket is already being worked
+on, so listing it again in the queue would ask someone to pick it up twice.
+This matches the original requirement, which describes an open work queue.
+The separate search view covers all statuses when a wider view is needed.
 
 Tickets with the same priority are sorted by their numeric ticket ID.
 Numeric sorting ensures that ticket identifiers are ordered by their
@@ -163,11 +188,70 @@ Reports include:
 - The total number of tickets.
 - The number of tickets in each status.
 - The number of tickets in each priority category.
+- The number of tickets in each category.
+- The unresolved and resolved totals.
+- The resolution percentage.
 
-Status and priority categories are included even when their counts are zero.
-This makes the reports consistent and easier to interpret.
+Status, priority, and category categories are included even when their
+counts are zero. This makes the reports consistent and easier to interpret.
 
-## 10. Current Limitations
+The resolution percentage is the resolved count divided by the total,
+multiplied by 100, rounded to one decimal place. An empty collection
+reports `0.0` rather than dividing by zero.
+
+## 10. Recorded Design Decisions
+
+The task split names four decisions that the implementation had to settle
+explicitly. Each is recorded here with the reason and the evidence that
+the behaviour is exercised by the test suite.
+
+### D1. The work queue lists open tickets only
+
+`get_work_queue()` filters on `status == "open"` before sorting by
+priority and numeric ticket ID. Unresolved-but-active (`in_progress`)
+tickets are deliberately excluded: the queue is a list of work waiting to
+be picked up, not a duplicate of every ticket that is not resolved. The
+original requirement asks for an *open* work queue, and the search view
+provides the wider listing.
+
+Evidence: `tests/test_workflow.py` covers the open-only filter and the
+priority-then-ID order.
+
+### D2. Version 1 records migrate in memory
+
+A record with no `notes` key is read as `notes: []`. The migration is
+in memory only: `load_tickets()` never writes, so a read cannot rewrite
+the user's file. The next save stores the version 2 form. `notes.py`
+keeps its own absent-key guard as defence in depth, but through the
+public API load has already normalised the record.
+
+Evidence: `tests/test_storage.py` asserts the migrated record has an
+empty notes list and that the file bytes are unchanged after loading.
+
+### D3. Saving validates before touching the disk
+
+`save_tickets()` runs every record through `validate_ticket()` and the
+cross-record duplicate-ID check before it creates a directory or a
+temporary file. It then writes the validated copies, not the caller's
+objects. This means a programmer error cannot reach the file, a refused
+save leaves the previous file intact, and what is written is exactly what
+`load_tickets()` will accept back.
+
+Evidence: `tests/test_storage.py` covers a rejected save with the file
+left byte-identical and the normalised form being written.
+
+### D4. Resolution percentage is rounded to one decimal place
+
+`generate_report()` returns `resolution_percentage` as
+`round((resolved / total) * 100, 1)`, and `0.0` when the collection is
+empty. The fixed key and rounding rule are the published interface, so
+callers and tests do not depend on floating-point noise such as
+`33.33333333333333`. The CLI prints the same value to one decimal place.
+
+Evidence: `tests/test_reports.py` covers rounding, the empty collection,
+and the key name.
+
+## 11. Current Limitations
 
 CampusFlow meets the requirements of a small command-line support-ticket
 application, but some limitations remain:
@@ -183,7 +267,7 @@ application, but some limitations remain:
 These limitations could be addressed in future versions if the project
 were expanded beyond its current scope.
 
-## 11. Conclusion
+## 12. Conclusion
 
 CampusFlow was designed with simplicity, maintainability, and correctness
 in mind.
