@@ -68,22 +68,43 @@ def save_tickets(tickets, file_path=DEFAULT_STORAGE_PATH):
 
     Validation runs before any filesystem work, so a refused save leaves the
     directory and the file exactly as they were. The validated copies are
-    what get written, which keeps the stored form canonical and makes saving
-    the mirror of loading.
+    what get written, which keeps the stored form canonical.
+
+    Everything this function writes, load_tickets reads back. That is why the
+    per-ticket validation is joined by the cross-record duplicate-ID check
+    that load applies: a save that skipped it would produce a file the next
+    load refuses.
     """
     if not isinstance(tickets, list):
         raise ValueError("Ticket storage must be a list of tickets.")
 
     validated = []
+    seen_ids = set()
 
     for index, ticket in enumerate(tickets):
         try:
-            validated.append(validate_ticket(ticket))
+            validated_ticket = validate_ticket(ticket)
         except ValueError as error:
             raise ValueError(
                 f"Refusing to save invalid ticket at position {index}: "
                 f"{error}"
             ) from error
+
+        ticket_id = validated_ticket["id"]
+
+        # validate_ticket sees one record at a time, so two otherwise valid
+        # tickets sharing an ID both pass it. load_tickets refuses a file
+        # that contains them, so writing them here would hand the next load
+        # a file this module cannot read back. The mirror check belongs on
+        # this side of the boundary, before any filesystem work.
+        if ticket_id in seen_ids:
+            raise ValueError(
+                f"Refusing to save invalid ticket at position {index}: "
+                f"duplicate ticket ID {ticket_id}."
+            )
+
+        seen_ids.add(ticket_id)
+        validated.append(validated_ticket)
 
     file_path = Path(file_path)
     file_path.parent.mkdir(parents=True, exist_ok=True)

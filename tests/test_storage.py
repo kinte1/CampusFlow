@@ -485,6 +485,52 @@ class TestSaveHardening(unittest.TestCase):
         self.assertEqual(written["notes"], [])
         self.assertNotIn("legacy_counter", written)
 
+    def test_rejects_duplicate_ids_without_touching_the_file(self):
+        """A save must not write what the next load would refuse.
+
+        validate_ticket sees one record at a time, so two otherwise valid
+        tickets sharing an ID both pass it. Without a check on this side,
+        save_tickets writes them and load_tickets then rejects the file it
+        just produced — the round trip broken at the boundary between its
+        own two halves.
+        """
+        save_tickets([make_record()], self.file_path)
+        before = self.file_path.read_bytes()
+
+        with self.assertRaisesRegex(
+            ValueError, "duplicate ticket ID T001"
+        ):
+            save_tickets([make_record(), make_record()], self.file_path)
+
+        self.assertEqual(self.file_path.read_bytes(), before)
+        self.assertEqual(len(load_tickets(self.file_path)), 1)
+
+    def test_rejects_duplicate_ids_before_creating_a_directory(self):
+        nested = Path(self.temp_directory.name) / "fresh" / "tickets.json"
+
+        with self.assertRaisesRegex(ValueError, "duplicate ticket ID"):
+            save_tickets([make_record(), make_record()], nested)
+
+        self.assertFalse(nested.parent.exists())
+
+    def test_everything_saved_can_be_loaded(self):
+        """The invariant D3 exists for: save and load must not disagree."""
+        tickets = [
+            make_record(),
+            make_record(
+                id="T002",
+                title="Printer jam",
+                urgency="low",
+                affected_users=1,
+                priority="low",
+            ),
+            make_record(id="T003", notes=[make_note("N001")]),
+        ]
+
+        save_tickets(tickets, self.file_path)
+
+        self.assertEqual(load_tickets(self.file_path), tickets)
+
     def test_rejects_a_non_list(self):
         with self.assertRaisesRegex(
             ValueError, "must be a list of tickets"
