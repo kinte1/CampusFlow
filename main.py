@@ -8,6 +8,7 @@ from campusflow.workflow import (
 )
 from campusflow.reports import print_report
 from campusflow.search import search_tickets
+from campusflow.understanding_check import run as run_understanding_check
 from campusflow.validation import CATEGORIES, STATUSES, PRIORITIES
 
 
@@ -83,6 +84,7 @@ def main():
         print("7. View work queue")
         print("8. View report")
         print("9. Search tickets")
+        print("13. Engineering Understanding Check")
         print("0. Exit")
 
         choice = input("Choose an option: ").strip()
@@ -133,6 +135,9 @@ def main():
 
             elif choice == "9":
                 search_tickets_menu()
+
+            elif choice == "13":
+                run_understanding_check()
 
             elif choice == "0":
                 print("Goodbye!")
