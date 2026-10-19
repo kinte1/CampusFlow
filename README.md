@@ -652,19 +652,92 @@ The menu allows users to:
 2. List all saved tickets.
 3. Assign a staff member to a ticket.
 4. Start work on an assigned ticket.
-5. Resolve an in-progress ticket.
+5. Resolve a ticket.
 6. Reopen a resolved ticket.
 7. View the open work queue, sorted by priority and ticket ID.
-8. View ticket totals and counts by status and priority.
+8. View totals, counts by status, priority and category, and the resolution percentage.
+9. Search tickets by title substring, with optional category, status and priority filters.
+10. Add a follow-up note to an open or in-progress ticket.
+11. View a ticket's notes in note-ID order.
+12. Search tickets and display the results sorted by priority, then ticket ID.
+13. Take the Engineering Understanding Check.
 
 Tickets are saved in `data/tickets.json`. If the file does not exist, the application starts with an empty ticket list.
 
+## JSON Data Format
+
+`data/tickets.json` contains a JSON list. Each element is a ticket object.
+
+### Version 2 (current)
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | `T001`, `T002`, ... unique |
+| `title` | string | non-empty after trimming |
+| `category` | string | `Network`, `Hardware`, `Software` or `Other` |
+| `urgency` | string | `low`, `medium` or `high` |
+| `affected_users` | integer | strictly positive; booleans rejected |
+| `priority` | string | `critical`, `high`, `medium` or `low`, derived from urgency and affected users |
+| `status` | string | `open`, `in_progress` or `resolved` |
+| `assigned_to` | string or null | required once a ticket is `in_progress` or `resolved` |
+| `notes` | list | each note is `{"note_id", "author", "message"}` |
+
+Example:
+
+```json
+[
+    {
+        "id": "T001",
+        "title": "Wi-Fi is not working",
+        "category": "Network",
+        "urgency": "high",
+        "affected_users": 12,
+        "priority": "critical",
+        "status": "open",
+        "assigned_to": null,
+        "notes": [
+            {
+                "note_id": "N001",
+                "author": "Mentor A",
+                "message": "Router rebooted"
+            }
+        ]
+    }
+]
+```
+
+### Version 1 (legacy)
+
+Version 1 files contain the same fields **except `notes`**. Loading a v1
+record is supported: it is read as `notes: []` in memory. That migration
+is in memory only — the file keeps its old shape until the next save,
+which writes the v2 form. No source data is discarded.
+
+### Validation on load and save
+
+- A missing file means an empty collection.
+- Malformed JSON, a non-list document, a missing field, an unknown
+  category/urgency/status, an inconsistent priority, an unassigned
+  in-progress or resolved ticket, a duplicate ticket ID, a malformed
+  `notes` value, or duplicate note IDs within one ticket all cause the
+  load to be refused.
+- A refused load changes neither the file nor any in-memory collection.
+- `save_tickets()` validates every record before it creates a directory
+  or writes a temporary file, and writes the normalised records. A
+  refused save leaves the existing file untouched.
+- Ticket and note IDs are derived from the records on disk, so a reload
+  does not reset either sequence.
+
 ### Run tests
 
-Run the complete test suite with:
+From a fresh clone, run:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-The test suite covers ticket validation, priority calculation, JSON persistence, workflow rules, and reporting.
+On systems where `python` is not on `PATH`, use `python3`.
+
+The test suite covers ticket validation, priority calculation, JSON
+persistence, workflow rules, notes, search, reporting and the
+understanding check.
