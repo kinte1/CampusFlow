@@ -1,4 +1,3 @@
-
 from campusflow.notes import add_note, get_notes
 from campusflow.storage import create_and_save_ticket, load_tickets
 from campusflow.workflow import (
@@ -26,6 +25,27 @@ def show_tickets(tickets):
             f"  Status: {ticket['status']}\n"
             f"  Assigned to: {ticket['assigned_to'] or 'Unassigned'}"
         )
+
+
+def prompt_affected_users():
+    """Prompt until the user enters a positive whole number."""
+    while True:
+        value = input("Affected users: ").strip()
+
+        try:
+            affected_users = int(value)
+        except ValueError:
+            print(
+                "Error: Please enter a positive whole number, "
+                "such as 2. Decimals and text are not accepted."
+            )
+            continue
+
+        if affected_users <= 0:
+            print("Error: Affected users must be greater than zero.")
+            continue
+
+        return affected_users
 
 
 def prompt_optional_filter(label, options):
@@ -105,9 +125,7 @@ def run_search(sorted_by_priority):
     results = search_tickets(load_tickets(), **criteria)
 
     if sorted_by_priority:
-        # search_tickets already returns priority order (B-2). Sorting the
-        # results again keeps this view's guarantee explicit, and stays
-        # correct if the search's own ordering ever changes.
+        # Keep this view's priority ordering explicit.
         results = sort_by_priority_then_id(results)
         print("\n=== SEARCH RESULTS (SORTED BY PRIORITY) ===")
     else:
@@ -153,7 +171,7 @@ def main():
                     "Category (Network/Hardware/Software/Other): "
                 )
                 urgency = input("Urgency (low/medium/high): ")
-                affected_users = int(input("Affected users: "))
+                affected_users = prompt_affected_users()
 
                 ticket = create_and_save_ticket(
                     title, category, urgency, affected_users
